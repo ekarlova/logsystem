@@ -31,14 +31,55 @@ class Ingress {
      * @param string $token
      * @param string|null $proxy
      */
-    public function __construct(array $cookies, $token, $proxy = null)
+    public function __construct(array $cookies = [], $token = null, $proxy = null)
+    {
+        if($cookies !== [] && !empty($token))
+        {
+            $this->setAuthCredentials($cookies, $token);
+        }
+        $this->setProxy($proxy);
+    }
+
+    /**
+     * Return true, if api are ready for send/receive requests
+     *
+     * @return bool
+     */
+    public function isReady()
+    {
+        if(empty($this->authCookie) || empty($this->xsrfToken)) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Set/update auth credentials
+     *
+     * @param array $cookies
+     * @param string $token
+     * @return $this
+     */
+    public function setAuthCredentials(array $cookies, $token)
     {
         array_walk($cookies, function(&$value, $key) {
             $value = $key . '=' . $value;
         });
         $this->authCookie = implode(';', $cookies);
         $this->xsrfToken = $token;
-        $this->setProxy($proxy);
+        return $this;
+    }
+
+    /**
+     * Remove auth credentials
+     *
+     * @return $this
+     */
+    public function clearAuthCredentials()
+    {
+        $this->authCookie = null;
+        $this->xsrfToken = null;
+        return $this;
     }
 
     /**
@@ -104,10 +145,13 @@ class Ingress {
      * @param array $params request params
      * @param boolean $useGzip enable gzip for compress big requests
      * @return array decoded response
-     * @throws \HttpUrlException
+     * @throws \ErrorException
      */
     public function sendRequest($url, array $params, $useGzip = true)
     {
+        if(!$this->isReady()) {
+            throw new \ErrorException('Missing auth credentials (cookies, xsrf-token)');
+        }
         $curl = curl_init();
         curl_setopt($curl, CURLOPT_URL, 'https://' . self::API_HOST . $url);
         curl_setopt($curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
@@ -137,7 +181,7 @@ class Ingress {
         // Execute
         $response = curl_exec($curl);
         if($response === false) {
-            throw new \HttpUrlException('Server error: ' . curl_error($curl));
+            throw new \ErrorException('Server error: ' . curl_error($curl));
         }
         curl_close($curl);
 
