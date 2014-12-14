@@ -10,6 +10,9 @@ use PHPIngress\Client\Env\Device,
     PHPIngress\Client\GoogleAccount;
 
 class PHPIngress {
+    const FRACTION_ENLIGHTENED = 'enlightened';
+    const FRACTION_RESISTANCE = 'resistance';
+
     /**
      * @var GoogleAccount
      */
@@ -110,4 +113,107 @@ class PHPIngress {
         return $this;
     }
 
+    /**
+     * Return array with global score info
+     *
+     * array('enlightened' => SCORE_VALUE, 'resistance' => SCORE_VALUE)
+     *
+     * @return array
+     */
+    public function getGameScore()
+    {
+        $rawScore = $this->processApiRequest('getGameScore', [], false);
+
+        return [
+            self::FRACTION_ENLIGHTENED => isset($rawScore['alienScore']) ? (int)$rawScore['alienScore'] : 0,
+            self::FRACTION_RESISTANCE => isset($rawScore['resistanceScore']) ? (int)$rawScore['resistanceScore'] : 0
+        ];
+    }
+
+    /**
+     * Return last news of the day
+     *
+     * @param string|null $lastNewsId previous news id
+     * @return array
+     */
+    public function getNewsOfTheDay($lastNewsId = null)
+    {
+        return $this->processApiRequest('getNewsOfTheDay', [$lastNewsId], false);
+    }
+
+    /**
+     * Return only actually news (
+     *
+     * @return array
+     */
+    public function getActuallyNewsOfTheDay()
+    {
+        static $lastNewsId = null;
+        $news = $this->getNewsOfTheDay($lastNewsId);
+        if(isset($news['contentId'])) {
+            $lastNewsId = $news['contentId'];
+        }
+        return $news;
+    }
+
+    /**
+     * @return int
+     */
+    public function getAvailableInvitesCount()
+    {
+        $invitesInfo = $this->processApiRequest('getInviteInfo', [], false);
+        $count = 0;
+        if(isset($invitesInfo['numAvailableInvites'])) {
+            $count = intval($invitesInfo['numAvailableInvites']);
+        }
+        return $count;
+    }
+
+    /**
+     * @param array $params
+     * @return bool
+     */
+    public function putBulkPlayerStorage(array $params)
+    {
+        $result = $this->processApiRequest('putBulkPlayerStorage', $params);
+        return $result == 'SUCCESS' ? true : false;
+    }
+
+    /**
+     * @param array $ids
+     * @return array
+     */
+    public function getNickNamesByPlayerIds(array $ids)
+    {
+        return $this->processApiRequest('getNickNamesFromPlayerIds', [$ids], count($ids) > 10);
+    }
+
+    /**
+     * @param array $params
+     * @return bool
+     */
+    public function updateProfileSettings(array $params)
+    {
+        $result = true;
+        try {
+            $this->processApiRequest('setProfileSettings', $params, false);
+        }
+        catch (\Exception $e) {
+            $result = false;
+        }
+        return $result;
+    }
+
+    private function processApiRequest($action, $params = [], $useGzip = true)
+    {
+        $response = $this->api->sendPlayerRequest($action, $params, $useGzip);
+        $output = [];
+        if(isset($response['result'])) {
+            $output = $response['result'];
+        }
+        if(isset($response['gameBasket'])) {
+
+        }
+        return $output;
+    }
 }
