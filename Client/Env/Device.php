@@ -54,7 +54,7 @@ class Device {
      * @param string $paramName
      * @return string|int
      */
-    public function getBuildPropParam($paramName)
+    public function getParam($paramName)
     {
         return isset($this->config[$paramName]) ? $this->config[$paramName] : null;
     }

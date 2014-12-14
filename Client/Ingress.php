@@ -258,6 +258,7 @@ class Ingress {
         curl_setopt($curl, CURLOPT_HTTP_VERSION, CURL_HTTP_VERSION_1_1);
         curl_setopt($curl, CURLOPT_POST, true);
         curl_setopt($curl, CURLOPT_HEADER, false);
+        curl_setopt($curl, CURLOPT_FAILONERROR, true);
         curl_setopt($curl, CURLOPT_FOLLOWLOCATION, false);
         curl_setopt($curl, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($curl, CURLOPT_SSL_VERIFYPEER, false);
@@ -284,6 +285,9 @@ class Ingress {
         $response = trim(curl_exec($curl));
         if($response === false) {
             throw new \ErrorException('Server error: ' . curl_error($curl));
+        }
+        elseif(curl_getinfo($curl, CURLINFO_HTTP_CODE) == 403) {
+            throw new \ErrorException('Api error: forbidden (maybe, this user is banned?)');
         }
         curl_close($curl);
         if($handshakeMode) {
@@ -314,7 +318,7 @@ class Ingress {
         // Build handshake request
         $request = [
             'nemesisSoftwareVersion' => self::CLIENT_SOFTWARE_VERSION,
-            'deviceSoftwareVersion' => $this->env->getBuildPropParam('ro.build.version.release'),
+            'deviceSoftwareVersion' => $this->env->getParam('ro.build.version.release'),
             'a' => self::CLIENT_SOFTWARE_SIGNATURE,
             'reason' => 'SUP'
         ];
