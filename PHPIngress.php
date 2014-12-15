@@ -204,6 +204,39 @@ class PHPIngress {
         return $result;
     }
 
+    /**
+     * @param array $cells
+     * @param int $filter 2 - faction messages,
+     * @param int $count
+     * @param int $minTs
+     * @param int $maxTs
+     * @param bool $faction
+     * @return array
+     */
+    public function getRawCommMessages(array $cells, $filter, $count = 100, $minTs = -1, $maxTs = -1, $faction = false)
+    {
+        $params = [
+            'playerLocation' => null,
+            'knobSyncTimestamp' => null,
+            'cellsAsHex' => $cells,
+            'clientBasket' => ['clientBlob' => null],
+            'energyGlobGuids' => null,
+            'desiredNumItems' => $count,
+            'minTimestampMs' => $minTs,
+            'maxTimestampMs' => $maxTs,
+            'categories' => $filter,
+            'factionOnly' => $faction,
+            'ascendingTimestampOrder' => false
+        ];
+        return $this->processApiRequest('getPaginatedPlexts', $params);
+    }
+
+    /**
+     * @param string $action ingress api method name
+     * @param array $params
+     * @param bool $useGzip
+     * @return array
+     */
     private function processApiRequest($action, $params = [], $useGzip = true)
     {
         $response = $this->api->sendPlayerRequest($action, $params, $useGzip);
